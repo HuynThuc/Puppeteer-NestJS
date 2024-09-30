@@ -8,7 +8,7 @@ export class PuppeteerService {
 
     // Khởi tạo trình duyệt
     async initializeBrowser() {
-        this.browser = await puppeteer.launch({ headless: true, slowMo: 50 });
+        this.browser = await puppeteer.launch({ headless: false, slowMo: 50 });
 
     }
 
@@ -63,10 +63,6 @@ export class PuppeteerService {
 
 
 
-
-
-
-
             // Lấy tiêu đề
             let title = 'Không có tiêu đề';
             try {
@@ -90,7 +86,7 @@ export class PuppeteerService {
 
 
             //Lấy mô tả
-            let description = 'Không có mô TẢ';
+            let description = 'Không có mô tả';
             try {
                 const description = await page.$eval('ytd-expander', (element) => element.textContent.trim());
                 console.log('Description:', description);
@@ -98,25 +94,20 @@ export class PuppeteerService {
                 console.error('Lỗi khi lấy mô tả', error);
             }
 
-            
-            // Tìm và nhấp vào nút thêm trong phần mô tả
-            await page.evaluate(() => {
-                const showMoreButton = document.querySelector<HTMLElement>('#description-inner');
-                if (showMoreButton) {
-                    showMoreButton.click();
-                }
-            })
-            //Nhấn nút Show transcript
-            await page.evaluate(() => {
-                const showTranscriptButton = document.querySelector<HTMLElement>('#primary-button button');
-                if (showTranscriptButton) {
-                    showTranscriptButton.click();
 
-                }
-            });
+
+
             // Lấy transcript (nếu có)
             let transcripts = [];
             try {
+                //Nhấn nút Show transcript
+                await page.evaluate(() => {
+                    const showTranscriptButton = document.querySelector<HTMLElement>('#primary-button button');
+                    if (showTranscriptButton) {
+                        showTranscriptButton.click();
+
+                    }
+                });
                 // Đảm bảo rằng nội dung transcript đã được tải
                 await page.waitForSelector('ytd-transcript-segment-list-renderer', { timeout: 10000 });
 
