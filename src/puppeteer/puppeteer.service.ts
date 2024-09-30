@@ -5,10 +5,13 @@ import * as puppeteer from 'puppeteer';
 export class PuppeteerService {
     private browser: puppeteer.Browser;
 
+
     // Khởi tạo trình duyệt
     async initializeBrowser() {
-        this.browser = await puppeteer.launch({ headless: true });
+        this.browser = await puppeteer.launch({ headless: true, slowMo: 50 });
+
     }
+
 
     // Đóng trình duyệt
     async closeBrowser() {
@@ -26,7 +29,7 @@ export class PuppeteerService {
                     const checkAndScroll = setInterval(() => {
                         const scrollHeight = document.documentElement.scrollHeight;
                         window.scrollTo(0, scrollHeight);
-                        
+
                         // Kiểm tra xem có thêm nội dung mới không
                         if (scrollHeight === previousHeight) {
                             clearInterval(checkAndScroll);
@@ -42,6 +45,7 @@ export class PuppeteerService {
         }
     }
 
+
     // Thực hiện web scraping
     async performWebScraping(url: string) {
         let page: puppeteer.Page;
@@ -56,13 +60,20 @@ export class PuppeteerService {
             // Điều hướng đến URL
             await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
+
+
+
+
+
+
+
             // Lấy tiêu đề
-            let title = 'Unknown Title';
+            let title = 'Không có tiêu đề';
             try {
                 title = await page.title();
                 console.log('Page title:', title);
             } catch (error) {
-                console.error('Error fetching title:', error);
+                console.error('Lỗi khi tìm tiêu đề:', error);
             }
 
             // Lấy số lượt xem
@@ -74,104 +85,89 @@ export class PuppeteerService {
                 console.error('Lỗi khi tìm lượt xem:', error);
             }
 
-            // Lấy mô tả
-            let description = 'Không có mô tả';
+
+
+
+
+            //Lấy mô tả
+            let description = 'Không có mô TẢ';
             try {
-                description = await page.$eval('ytd-expander', el => el.textContent.trim());
+                const description = await page.$eval('ytd-expander', (element) => element.textContent.trim());
                 console.log('Description:', description);
             } catch (error) {
-                console.error('Lỗi khi tìm mô tả:', error);
+                console.error('Lỗi khi lấy mô tả', error);
             }
+
             
-            //Lấy transcript (nếu có)
-        
-            let transcript = 'Không có transcript';
-            try {
-                // Chờ và click vào nút 'More actions'
-                await page.waitForSelector('button[aria-label="More actions"]', { timeout: 5000 });
-                await page.click('button[aria-label="More actions"]');
-
-                // Chờ cho menu hiện ra và kiểm tra nếu transcript có sẵn
-                await page.waitForSelector('tp-yt-paper-item[role="menuitem"]', { timeout: 5000 });
-
-                const hasTranscript = await page.evaluate(() => {
-                    const items = Array.from(document.querySelectorAll('tp-yt-paper-item[role="menuitem"]'));
-                    return items.some(item => item.textContent.includes('Show transcript'));
-                });
-
-                if (hasTranscript) {
-                    // Nhấn vào "Show transcript" nếu có
-                    await page.evaluate(() => {
-                        const items = Array.from(document.querySelectorAll('tp-yt-paper-item[role="menuitem"]'));
-                        const transcriptItem = items.find(item => item.textContent.includes('Show transcript')) as HTMLElement;
-                        if (transcriptItem) transcriptItem.click();
-                    });
-
-                    // Chờ transcript renderer hiện ra
-                    await page.waitForSelector('ytd-transcript-renderer', { timeout: 5000 });
-
-                    // Lấy transcript text
-                    transcript = await page.evaluate(() => {
-                        const transcriptSegments = Array.from(document.querySelectorAll('ytd-transcript-body-renderer div.segment'));
-                        return transcriptSegments.map(segment => {
-                            const timeElement = segment.querySelector('.segment-timestamp');
-                            const textElement = segment.querySelector('.segment-text');
-                            const time = timeElement ? timeElement.textContent.trim() : '';
-                            const text = textElement ? textElement.textContent.trim() : '';
-                            return `${time} ${text}`;
-                        }).join('\n');
-                    });
+            // Tìm và nhấp vào nút thêm trong phần mô tả
+            await page.evaluate(() => {
+                const showMoreButton = document.querySelector<HTMLElement>('#description-inner');
+                if (showMoreButton) {
+                    showMoreButton.click();
                 }
+            })
+            //Nhấn nút Show transcript
+            await page.evaluate(() => {
+                const showTranscriptButton = document.querySelector<HTMLElement>('#primary-button button');
+                if (showTranscriptButton) {
+                    showTranscriptButton.click();
 
-                console.log('Transcript:', transcript);
+                }
+            });
+            // Lấy transcript (nếu có)
+            let transcripts = [];
+            try {
+                // Đảm bảo rằng nội dung transcript đã được tải
+                await page.waitForSelector('ytd-transcript-segment-list-renderer', { timeout: 10000 });
+
+                //Lấy nội dung transcript
+                transcripts = await page.$$eval('ytd-transcript-segment-renderer', transcriptElements => {
+                    return Array.from(transcriptElements).map(transcript => ({
+                        segmentText: transcript.querySelector('.segment-text')?.textContent.trim() || '',
+                        timestamp: transcript.querySelector('.segment-timestamp')?.textContent.trim() || ''
+                    }));
+                });
+                transcripts.forEach(transcript => {
+                    console.log(`Transcript: ${transcript.timestamp}: ${transcript.segmentText}`);
+                });
 
             } catch (error) {
-                console.error('Lỗi khi tìm transcript:', error.message);
+                console.error('Không có transcrip');
+                transcripts.push({ timestamp: 'Không có', segmentText: 'Không có' });
+
             }
 
-
-            // Cuộn trang tự động để tải bình luận
+            //Cuộn trang tự động để tải bình luận
             await this.autoScroll(page);
-
-            // Lấy bình luận
+            //Lấy bình luận
             let comments = [];
             try {
-                await page.waitForSelector('#comments', { timeout: 10000 });
+                page.waitForSelector('#comments', { timeout: 10000 });
                 comments = await page.$$eval('ytd-comment-thread-renderer', commentElements => {
-                    return Array.from(commentElements).map(comment => {
-                        const authorElement = comment.querySelector('#author-text');
-                        const contentElement = comment.querySelector('#content-text');
-
-                        return {
-                            author: authorElement ? authorElement.textContent.trim() : '',
-                            comment: contentElement ? contentElement.textContent.trim() : ''
-                        };
-                    });
+                    return Array.from(commentElements).map(comment => ({
+                        author: comment.querySelector('#author-text')?.textContent.trim() || 'Không có tác giả',
+                        comment: comment.querySelector('#content-text')?.textContent.trim() || 'Không có bình luận'
+                    }));
                 });
-                if (comments.length === 0) {
-                    comments.push({ author: 'Không có tác giả', comment: 'Không có bình luận' });
-                }
                 comments.forEach(comment => {
                     console.log(`'Comment:'${comment.author}: ${comment.comment}`);
                 });
             } catch (error) {
-                console.error('Lỗi khi tìm comments:', error);
+                console.error('Không có comment', error);
             }
 
             // Trả về kết quả
-            return { title, viewCount, transcript, description, comments };
+            return { title, viewCount, description, transcripts, comments };
 
         } catch (error) {
             console.error('Error while scraping:', error);
             return null;
 
         } finally {
-           
             if (page) {
                 await page.close();
             }
         }
     }
 
-    
 }

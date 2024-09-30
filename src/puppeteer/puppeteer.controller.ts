@@ -10,10 +10,10 @@ export class PuppeteerController {
     // Khởi tạo trình duyệt
     await this.puppeteerService.initializeBrowser();
 
-    // Thực hiện scraping
+    //scraping
     const result = await this.puppeteerService.performWebScraping(url);
 
-    // Đóng trình duyệt
+    //Đóng trình duyệt
     await this.puppeteerService.closeBrowser();
 
     return result || 'Failed to scrape the page';
