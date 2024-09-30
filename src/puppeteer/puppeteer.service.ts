@@ -107,7 +107,6 @@ export class PuppeteerService {
                         showTranscriptButton.click();
                     }
                 });
-                // Đảm bảo rằng nội dung transcript đã được tải
                 await page.waitForSelector('ytd-transcript-segment-list-renderer', { timeout: 10000 });
 
                 //Lấy nội dung transcript
