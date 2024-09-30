@@ -105,7 +105,6 @@ export class PuppeteerService {
                     const showTranscriptButton = document.querySelector<HTMLElement>('#primary-button button');
                     if (showTranscriptButton) {
                         showTranscriptButton.click();
-
                     }
                 });
                 // Đảm bảo rằng nội dung transcript đã được tải
