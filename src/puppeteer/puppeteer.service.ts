@@ -8,34 +8,46 @@ export class PuppeteerService {
 
     // Khởi tạo trình duyệt
     async initializeBrowser() {
-        this.browser = await puppeteer.launch({ headless: false, slowMo: 50 });
+        this.browser = await puppeteer.launch({ headless: false }); //headless hiện giao diện trình duyê
 
     }
-
 
     // Đóng trình duyệt
     async closeBrowser() {
-        if (this.browser) {
-            await this.browser.close();
-        }
-    }
+        await this.browser.close();
+      }
+
+
+    // //Gọi phương thức hoặc dùng POSTMAN
+    // constructor() {
+    //     this.initializeBrowser().then(() => {
+    //         this.runScraping(); // Gọi phương thức để thực hiện scraping
+    //     });
+    // }
+
+    //  // Phương thức chạy scraping với URL cụ thể
+    //  async runScraping() {
+    //     const url = 'https://www.youtube.com/watch?v=ZNHbAOKHFek&list=RDZNHbAOKHFek&start_radio=1'; // Thay đổi URL muốn scrape
+    //     const result = await this.performWebScraping(url);
+    //     console.log(result); // Hiển thị kết quả
+    // }
 
     // Tự động cuộn trang để tải nội dung
     private async autoScroll(page: puppeteer.Page) {
         try {
             await page.evaluate(async () => {
                 await new Promise<void>((resolve) => {
-                    let previousHeight = 0;
+                    let height = 0;
                     const checkAndScroll = setInterval(() => {
                         const scrollHeight = document.documentElement.scrollHeight;
                         window.scrollTo(0, scrollHeight);
 
-                        // Kiểm tra xem có thêm nội dung mới không
-                        if (scrollHeight === previousHeight) {
-                            clearInterval(checkAndScroll);
+                        // Kiểm tra nội dung mới (nếu có)
+                        if (scrollHeight === height) {
+                            clearInterval(checkAndScroll); //Nếu kh có dừng cuộn
                             resolve();
                         } else {
-                            previousHeight = scrollHeight;
+                            height = scrollHeight;
                         }
                     }, 5000); // Đợi 5 giây giữa mỗi lần cuộn
                 });
@@ -69,7 +81,7 @@ export class PuppeteerService {
                 title = await page.title();
                 console.log('Page title:', title);
             } catch (error) {
-                console.error('Lỗi khi tìm tiêu đề:', error);
+                console.error('Không có tiêu đề', error);
             }
 
             // Lấy số lượt xem
@@ -78,7 +90,7 @@ export class PuppeteerService {
                 viewCount = await page.$eval('.view-count', el => el.textContent.trim());
                 console.log('ViewCount:', viewCount);
             } catch (error) {
-                console.error('Lỗi khi tìm lượt xem:', error);
+                console.error('Không có lượt xem', error);
             }
 
 
@@ -91,7 +103,7 @@ export class PuppeteerService {
                 const description = await page.$eval('ytd-expander', (element) => element.textContent.trim());
                 console.log('Description:', description);
             } catch (error) {
-                console.error('Lỗi khi lấy mô tả', error);
+                console.error('Không có mô tả', error);
             }
 
 
@@ -102,9 +114,9 @@ export class PuppeteerService {
             try {
                 //Nhấn nút Show transcript
                 await page.evaluate(() => {
-                    const showTranscriptButton = document.querySelector<HTMLElement>('#primary-button button');
-                    if (showTranscriptButton) {
-                        showTranscriptButton.click();
+                    const TranscriptButton = document.querySelector<HTMLElement>('#primary-button button');
+                    if (TranscriptButton) {
+                        TranscriptButton.click();
                     }
                 });
                 await page.waitForSelector('ytd-transcript-segment-list-renderer', { timeout: 10000 });
@@ -121,7 +133,7 @@ export class PuppeteerService {
                 });
 
             } catch (error) {
-                console.error('Không có transcrip');
+                console.error('Không có transcrip', error);
                 transcripts.push({ timestamp: 'Không có', segmentText: 'Không có' });
 
             }
@@ -131,6 +143,7 @@ export class PuppeteerService {
             //Lấy bình luận
             let comments = [];
             try {
+               
                 page.waitForSelector('#comments', { timeout: 10000 });
                 comments = await page.$$eval('ytd-comment-thread-renderer', commentElements => {
                     return Array.from(commentElements).map(comment => ({
@@ -149,7 +162,7 @@ export class PuppeteerService {
             return { title, viewCount, description, transcripts, comments };
 
         } catch (error) {
-            console.error('Error while scraping:', error);
+            console.error('Lỗi khi scarping:', error);
             return null;
 
         } finally {
