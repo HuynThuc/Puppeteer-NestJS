@@ -100,7 +100,7 @@ export class PuppeteerService {
             //Lấy mô tả
             let description = 'Không có mô tả';
             try {
-                const description = await page.$eval('ytd-expander', (element) => element.textContent.trim());
+                description = await page.$eval('ytd-expander', (element) => element.textContent.trim());
                 console.log('Description:', description);
             } catch (error) {
                 console.error('Không có mô tả', error);
